@@ -544,7 +544,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                       addTextBlock(block.id)
                     }
                   }}
-                  placeholder="" // Remove placeholder text
+                  placeholder="" 
                   className="w-full min-h-[120px] p-4 bg-transparent border-none outline-none resize-none overflow-hidden font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground transition-all duration-200"
                   style={{
                     fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
