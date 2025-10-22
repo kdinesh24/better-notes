@@ -15,6 +15,7 @@ import {
   CodeBracketIcon,
   XMarkIcon,
   ChevronDownIcon,
+  DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import { cn } from "@/lib/utils";
 
@@ -318,26 +319,40 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
 
   const insertCodeBlock = () => {
     const newBlockId = `code-${Date.now()}`;
+    const newTextBlockId = `text-${Date.now() + 1}`;
     const newBlock: ContentBlock = {
       id: newBlockId,
       type: "code",
-      content: "", // Remove placeholder text
+      content: "",
       language: "javascript",
+    };
+    const newTextBlock: ContentBlock = {
+      id: newTextBlockId,
+      type: "text",
+      content: "",
     };
 
     setBlocks((prev) => {
-      // Insert after focused block or at the end
       if (focusedBlock) {
         const focusedIndex = prev.findIndex(
           (block) => block.id === focusedBlock,
         );
         if (focusedIndex !== -1) {
+          const focusedBlockData = prev[focusedIndex];
           const newBlocks = [...prev];
-          newBlocks.splice(focusedIndex + 1, 0, newBlock);
+
+          if (
+            focusedBlockData.type === "text" &&
+            focusedBlockData.content.trim() === ""
+          ) {
+            newBlocks.splice(focusedIndex, 1, newBlock, newTextBlock);
+          } else {
+            newBlocks.splice(focusedIndex + 1, 0, newBlock, newTextBlock);
+          }
           return consolidateBlocks(newBlocks);
         }
       }
-      return consolidateBlocks([...prev, newBlock]);
+      return consolidateBlocks([...prev, newBlock, newTextBlock]);
     });
 
     setTimeout(() => {
@@ -554,7 +569,9 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           <div key={block.id} className="group">
             {block.type === "text" && (
               <textarea
-                ref={(el) => (blockRefs.current[block.id] = el)}
+                ref={(el) => {
+                  blockRefs.current[block.id] = el;
+                }}
                 value={block.content}
                 onChange={(e) =>
                   updateBlock(block.id, { content: e.target.value })
@@ -586,96 +603,165 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
             )}
 
             {block.type === "code" && (
-              <div className="bg-card border rounded-lg overflow-hidden transition-all duration-200 hover:shadow-sm">
-                <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-                  <div className="flex items-center gap-3">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs font-medium"
-                        >
-                          {LANGUAGES.find(
-                            (lang) =>
-                              lang.value === (block.language || "javascript"),
-                          )?.label || "JavaScript"}
-                          <ChevronDownIcon className="ml-1 h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-40">
-                        {LANGUAGES.map((lang) => (
-                          <DropdownMenuItem
-                            key={lang.value}
-                            onClick={() =>
-                              updateBlock(block.id, { language: lang.value })
-                            }
-                            className="text-xs"
-                          >
-                            {lang.label}
-                          </DropdownMenuItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() =>
-                        navigator.clipboard.writeText(block.content)
-                      }
-                    >
-                      Copy
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeBlock(block.id)}
-                    >
-                      <XMarkIcon className="h-3 w-3" />
-                    </Button>
-                  </div>
+              <div className="relative my-6 group/code">
+                <div className="absolute inset-0 pointer-events-none">
+                  <div
+                    className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                    style={{ borderColor: "#e7e8e8" }}
+                  />
+                  <div
+                    className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                    style={{ borderColor: "#e7e8e8" }}
+                  />
+                  <div
+                    className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                    style={{ borderColor: "#e7e8e8" }}
+                  />
+                  <div
+                    className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
+                    style={{ borderColor: "#e7e8e8" }}
+                  />
+
+                  <div
+                    className="absolute inset-0 border border-dashed rounded-none opacity-100 group-hover/code:opacity-0 transition-opacity"
+                    style={{ borderColor: "#191a1c" }}
+                  />
+
+                  <div
+                    className="absolute top-0 left-3 right-3 h-px border-t border-dashed opacity-0 group-hover/code:opacity-100 transition-opacity"
+                    style={{ borderTopColor: "#3d3e40" }}
+                  />
+                  <div
+                    className="absolute bottom-0 left-3 right-3 h-px border-t border-dashed opacity-0 group-hover/code:opacity-100 transition-opacity"
+                    style={{ borderTopColor: "#3d3e40" }}
+                  />
+                  <div
+                    className="absolute left-0 top-3 bottom-3 w-px border-l border-dashed opacity-0 group-hover/code:opacity-100 transition-opacity"
+                    style={{ borderLeftColor: "#3d3e40" }}
+                  />
+                  <div
+                    className="absolute right-0 top-3 bottom-3 w-px border-l border-dashed opacity-0 group-hover/code:opacity-100 transition-opacity"
+                    style={{ borderLeftColor: "#3d3e40" }}
+                  />
                 </div>
-                <textarea
-                  ref={(el) => (blockRefs.current[block.id] = el)}
-                  value={block.content}
-                  onChange={(e) =>
-                    updateBlock(block.id, { content: e.target.value })
-                  }
-                  onFocus={() => setFocusedBlock(block.id)}
-                  onKeyDown={(e) => {
-                    if (e.ctrlKey && e.key === "a") {
-                      e.preventDefault();
-                      const textarea = e.target as HTMLTextAreaElement;
-                      if (textarea) {
-                        textarea.select();
+                <div className="bg-card overflow-hidden transition-all duration-200">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-muted/20">
+                    <div className="flex items-center gap-3">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs font-medium"
+                          >
+                            {LANGUAGES.find(
+                              (lang) =>
+                                lang.value === (block.language || "javascript"),
+                            )?.label || "JavaScript"}
+                            <ChevronDownIcon className="ml-1 h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="w-40">
+                          {LANGUAGES.map((lang) => (
+                            <DropdownMenuItem
+                              key={lang.value}
+                              onClick={() =>
+                                updateBlock(block.id, { language: lang.value })
+                              }
+                              className="text-xs"
+                            >
+                              {lang.label}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() =>
+                          navigator.clipboard.writeText(block.content)
+                        }
+                      >
+                        <DocumentDuplicateIcon className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeBlock(block.id)}
+                      >
+                        <XMarkIcon className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <textarea
+                    ref={(el) => {
+                      blockRefs.current[block.id] = el;
+                    }}
+                    value={block.content}
+                    onChange={(e) =>
+                      updateBlock(block.id, { content: e.target.value })
+                    }
+                    onFocus={() => setFocusedBlock(block.id)}
+                    onKeyDown={(e) => {
+                      if (e.ctrlKey && e.key === "a") {
+                        e.preventDefault();
+                        const textarea = e.target as HTMLTextAreaElement;
+                        if (textarea) {
+                          textarea.select();
+                        }
+                        return;
                       }
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      addTextBlock(block.id);
-                    }
-                  }}
-                  placeholder=""
-                  className="w-full min-h-[120px] p-4 bg-transparent border-none outline-none resize-none overflow-hidden font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground transition-all duration-200"
-                  style={{
-                    fontFamily:
-                      "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
-                  }}
-                  onInput={(e) => {
-                    const textarea = e.target as HTMLTextAreaElement;
-                    const scrollHeight = textarea.scrollHeight;
-                    const newHeight = Math.max(120, scrollHeight);
-                    textarea.style.height = "auto";
-                    textarea.style.height = newHeight + "px";
-                  }}
-                />
-                <div className="px-4 py-2 text-xs text-muted-foreground border-t bg-muted/20">
-                  Press Escape to exit code block
+                      if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey) {
+                        const textarea = e.target as HTMLTextAreaElement;
+                        const cursorPosition = textarea.selectionStart;
+                        const content = textarea.value;
+
+                        if (cursorPosition === content.length) {
+                          e.preventDefault();
+                          const newTextBlockId = `text-${Date.now()}`;
+                          const newTextBlock: ContentBlock = {
+                            id: newTextBlockId,
+                            type: "text",
+                            content: "",
+                          };
+
+                          setBlocks((prev) => {
+                            const currentIndex = prev.findIndex(
+                              (b) => b.id === block.id,
+                            );
+                            const newBlocks = [...prev];
+                            newBlocks.splice(currentIndex + 1, 0, newTextBlock);
+                            return consolidateBlocks(newBlocks);
+                          });
+
+                          setTimeout(() => {
+                            const newTextarea =
+                              blockRefs.current[newTextBlockId];
+                            if (newTextarea) {
+                              newTextarea.focus();
+                            }
+                          }, 50);
+                        }
+                      }
+                    }}
+                    placeholder=""
+                    className="w-full min-h-[120px] p-4 bg-transparent border-none outline-none resize-none overflow-hidden font-mono text-sm leading-relaxed text-foreground placeholder:text-muted-foreground transition-all duration-200"
+                    style={{
+                      fontFamily:
+                        "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
+                    }}
+                    onInput={(e) => {
+                      const textarea = e.target as HTMLTextAreaElement;
+                      const scrollHeight = textarea.scrollHeight;
+                      const newHeight = Math.max(120, scrollHeight);
+                      textarea.style.height = "auto";
+                      textarea.style.height = newHeight + "px";
+                    }}
+                  />
                 </div>
               </div>
             )}
