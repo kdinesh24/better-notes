@@ -79,6 +79,21 @@ export function NotesApp() {
     });
   };
 
+  const closeNote = () => {
+    if (activeNoteId) {
+      const currentNote = notes.find((n) => n.id === activeNoteId);
+      if (
+        currentNote &&
+        !currentNote.title.trim() &&
+        !currentNote.content.trim()
+      ) {
+        deleteNote(activeNoteId);
+      } else {
+        setActiveNoteId(null);
+      }
+    }
+  };
+
   const filteredNotes = notes.filter(
     (note) =>
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,7 +150,7 @@ export function NotesApp() {
           <NoteEditor
             note={activeNote}
             onUpdate={updateNote}
-            onClose={() => setActiveNoteId(null)}
+            onClose={closeNote}
           />
         ) : (
           <NotesGrid

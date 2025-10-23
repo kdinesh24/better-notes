@@ -64,6 +64,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   const blockRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
   const isInitializedRef = useRef(false);
   const cursorPositionRef = useRef<number>(0);
+  const noteIdRef = useRef(note.id);
 
   const consolidateBlocks = useCallback(
     (blocks: ContentBlock[]): ContentBlock[] => {
@@ -164,11 +165,16 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   );
 
   useEffect(() => {
-    if (!isInitializedRef.current) {
+    if (note.id !== noteIdRef.current) {
+      noteIdRef.current = note.id;
+      setTitle(note.title);
+      setBlocks(parseContentToBlocks(note.content));
+      isInitializedRef.current = true;
+    } else if (!isInitializedRef.current) {
       setBlocks(parseContentToBlocks(note.content));
       isInitializedRef.current = true;
     }
-  }, [note.content, parseContentToBlocks]);
+  }, [note.id, note.title, note.content, parseContentToBlocks]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -640,22 +646,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
             {block.type === "code" && (
               <div className="relative my-6 group/code">
                 <div className="absolute inset-0 pointer-events-none">
-                  <div
-                    className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                    style={{ borderColor: "#e7e8e8" }}
-                  />
-                  <div
-                    className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                    style={{ borderColor: "#e7e8e8" }}
-                  />
-                  <div
-                    className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                    style={{ borderColor: "#e7e8e8" }}
-                  />
-                  <div
-                    className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10"
-                    style={{ borderColor: "#e7e8e8" }}
-                  />
+                  <div className="absolute top-0 left-0 w-3 h-3 border-l-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10 dark:border-[#e7e8e8] border-[#191a1c]" />
+                  <div className="absolute top-0 right-0 w-3 h-3 border-r-2 border-t-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10 dark:border-[#e7e8e8] border-[#191a1c]" />
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10 dark:border-[#e7e8e8] border-[#191a1c]" />
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 opacity-0 group-hover/code:opacity-100 transition-opacity z-10 dark:border-[#e7e8e8] border-[#191a1c]" />
 
                   <div
                     className="absolute inset-0 border border-dashed rounded-none opacity-100 group-hover/code:opacity-0 transition-opacity"

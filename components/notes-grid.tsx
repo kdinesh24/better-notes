@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import type { Note } from "@/types/note"
-import { Button } from "@/components/ui/button"
-import { TrashIcon, PhotoIcon } from "@heroicons/react/24/outline"
-import { formatDistanceToNow } from "date-fns"
+import { useState } from "react";
+import type { Note } from "@/types/note";
+import { Button } from "@/components/ui/button";
+import { TrashIcon, PhotoIcon } from "@heroicons/react/24/outline";
+import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,37 +16,46 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 interface NotesGridProps {
-  notes: Note[]
-  onNoteSelect: (id: string) => void
-  onNoteDelete: (id: string) => void
-  onNoteUpdate: (id: string, updates: Partial<Note>) => void
+  notes: Note[];
+  onNoteSelect: (id: string) => void;
+  onNoteDelete: (id: string) => void;
+  onNoteUpdate: (id: string, updates: Partial<Note>) => void;
 }
 
-export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: NotesGridProps) {
-  const [hoveredNote, setHoveredNote] = useState<string | null>(null)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [noteToDelete, setNoteToDelete] = useState<string | null>(null)
+export function NotesGrid({
+  notes,
+  onNoteSelect,
+  onNoteDelete,
+  onNoteUpdate,
+}: NotesGridProps) {
+  const [hoveredNote, setHoveredNote] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
 
-  const handleQuickEdit = (note: Note, field: "title" | "content", value: string) => {
-    onNoteUpdate(note.id, { [field]: value })
-  }
+  const handleQuickEdit = (
+    note: Note,
+    field: "title" | "content",
+    value: string,
+  ) => {
+    onNoteUpdate(note.id, { [field]: value });
+  };
 
   const handleDeleteClick = (e: React.MouseEvent, noteId: string) => {
-    e.stopPropagation()
-    setNoteToDelete(noteId)
-    setDeleteDialogOpen(true)
-  }
+    e.stopPropagation();
+    setNoteToDelete(noteId);
+    setDeleteDialogOpen(true);
+  };
 
   const confirmDelete = () => {
     if (noteToDelete) {
-      onNoteDelete(noteToDelete)
-      setNoteToDelete(null)
+      onNoteDelete(noteToDelete);
+      setNoteToDelete(null);
     }
-    setDeleteDialogOpen(false)
-  }
+    setDeleteDialogOpen(false);
+  };
 
   if (notes.length === 0) {
     return (
@@ -55,9 +64,11 @@ export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: N
           <PhotoIcon className="h-8 w-8 text-muted-foreground" />
         </div>
         <h2 className="text-xl font-medium mb-2">No notes yet</h2>
-        <p className="text-muted-foreground">Create your first note to get started</p>
+        <p className="text-muted-foreground">
+          Create your first note to get started
+        </p>
       </div>
-    )
+    );
   }
 
   return (
@@ -76,7 +87,7 @@ export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: N
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground [&:hover_svg]:text-white"
                 onClick={(e) => handleDeleteClick(e, note.id)}
               >
                 <TrashIcon className="h-4 w-4" />
@@ -115,7 +126,9 @@ export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: N
             )}
 
             <div className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(note.updatedAt), { addSuffix: true })}
+              {formatDistanceToNow(new Date(note.updatedAt), {
+                addSuffix: true,
+              })}
             </div>
           </div>
         ))}
@@ -126,7 +139,8 @@ export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: N
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Note</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this note? This action cannot be undone.
+              Are you sure you want to delete this note? This action cannot be
+              undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -141,5 +155,5 @@ export function NotesGrid({ notes, onNoteSelect, onNoteDelete, onNoteUpdate }: N
         </AlertDialogContent>
       </AlertDialog>
     </>
-  )
+  );
 }
