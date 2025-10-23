@@ -63,6 +63,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const blockRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
   const isInitializedRef = useRef(false);
+  const cursorPositionRef = useRef<number>(0);
 
   const consolidateBlocks = useCallback(
     (blocks: ContentBlock[]): ContentBlock[] => {
@@ -75,12 +76,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       for (let i = 0; i < blocks.length; i++) {
         const block = blocks[i];
 
-        // Skip empty text blocks that are adjacent to other text blocks
         if (block.type === "text" && !block.content.trim()) {
           const prevBlock = consolidated[consolidated.length - 1];
           const nextBlock = blocks[i + 1];
 
-          // Skip if previous or next block is also text
           if (
             (prevBlock && prevBlock.type === "text") ||
             (nextBlock && nextBlock.type === "text")
@@ -92,7 +91,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         consolidated.push(block);
       }
 
-      // Ensure we always have at least one text block
       if (
         consolidated.length === 0 ||
         consolidated.every((block) => block.type !== "text")
@@ -124,7 +122,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       parts.forEach((part) => {
         if (!part) return;
 
-        // Handle images
         const imageMatch = part.match(/\[IMAGE:(\d+)\]/);
         if (imageMatch) {
           const imageId = imageMatch[1];
@@ -140,7 +137,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           return;
         }
 
-        // Handle code blocks
         const codeMatch = part.match(/\[CODE:([^\]]*)\]([\s\S]*?)\[\/CODE\]/);
         if (codeMatch) {
           const [, language, code] = codeMatch;
@@ -153,7 +149,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           return;
         }
 
-        // Handle text
         if (part.trim()) {
           newBlocks.push({
             id: `text-${blockId++}`,
@@ -230,6 +225,9 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           e.preventDefault();
           const file = item.getAsFile();
           if (file) {
+            const savedScrollPosition =
+              window.pageYOffset || document.documentElement.scrollTop;
+
             const reader = new FileReader();
             reader.onload = (event) => {
               const imageUrl = event.target?.result as string;
@@ -266,16 +264,47 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                     const focusedBlockData = prev[focusedIndex];
                     const newBlocks = [...prev];
 
-                    if (
-                      focusedBlockData.type === "text" &&
-                      focusedBlockData.content.trim() === ""
-                    ) {
-                      newBlocks.splice(
-                        focusedIndex,
-                        1,
-                        newImageBlock,
-                        newTextBlock,
-                      );
+                    if (focusedBlockData.type === "text") {
+                      const cursorPos = cursorPositionRef.current;
+                      const content = focusedBlockData.content;
+
+                      const beforeCursor = content.substring(0, cursorPos);
+                      const afterCursor = content.substring(cursorPos);
+
+                      if (
+                        beforeCursor.trim() === "" &&
+                        afterCursor.trim() === ""
+                      ) {
+                        newBlocks.splice(focusedIndex, 1, newImageBlock, {
+                          ...newTextBlock,
+                          content: afterCursor,
+                        });
+                      } else if (beforeCursor.trim() === "") {
+                        newBlocks.splice(focusedIndex, 1, newImageBlock, {
+                          ...newTextBlock,
+                          content: afterCursor,
+                        });
+                      } else if (afterCursor.trim() === "") {
+                        newBlocks[focusedIndex] = {
+                          ...focusedBlockData,
+                          content: beforeCursor,
+                        };
+                        newBlocks.splice(
+                          focusedIndex + 1,
+                          0,
+                          newImageBlock,
+                          newTextBlock,
+                        );
+                      } else {
+                        newBlocks[focusedIndex] = {
+                          ...focusedBlockData,
+                          content: beforeCursor,
+                        };
+                        newBlocks.splice(focusedIndex + 1, 0, newImageBlock, {
+                          ...newTextBlock,
+                          content: afterCursor,
+                        });
+                      }
                     } else {
                       newBlocks.splice(
                         focusedIndex + 1,
@@ -294,12 +323,15 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                 ]);
               });
 
-              setTimeout(() => {
-                const textarea = blockRefs.current[newTextBlockId];
-                if (textarea) {
-                  textarea.focus();
-                }
-              }, 100);
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  window.scrollTo(0, savedScrollPosition);
+                  const textarea = blockRefs.current[newTextBlockId];
+                  if (textarea) {
+                    textarea.focus({ preventScroll: true });
+                  }
+                });
+              });
             };
             reader.readAsDataURL(file);
           }
@@ -409,18 +441,15 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
 
     if (e.key === "Backspace" && cursorPosition === 0) {
       if (currentIndex <= 0) {
-        // First block, do nothing (default behavior)
         return;
       }
 
       if (currentBlock.content.trim() === "") {
-        // Remove empty current block
         e.preventDefault();
         removeBlock(blockId);
         return;
       }
 
-      // Try to find previous text block, skipping empty code blocks
       let mergeIndex = currentIndex - 1;
       let canMerge = false;
       while (mergeIndex >= 0) {
@@ -432,10 +461,8 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           potentialPrev.type === "code" &&
           !potentialPrev.content.trim()
         ) {
-          // Skip empty code blocks
           mergeIndex--;
         } else {
-          // Can't skip non-empty code or other types
           break;
         }
       }
@@ -444,7 +471,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         e.preventDefault();
         const prevBlock = blocks[mergeIndex];
         const originalLen = prevBlock.content.length;
-        // Add space if needed for smooth merging
         const addSpace =
           prevBlock.content &&
           currentBlock.content.trim() !== "" &&
@@ -457,7 +483,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         mergedContent += currentBlock.content;
         const mergedId = prevBlock.id;
 
-        // Remove blocks from mergeIndex + 1 to currentIndex (inclusive)
         const blocksToRemove = currentIndex - mergeIndex;
 
         setBlocks((prevBlocks) => {
@@ -470,7 +495,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           return consolidateBlocks(newBlocks);
         });
 
-        // Focus the merged block at the appropriate position
         setTimeout(() => {
           const mergedTextarea = blockRefs.current[mergedId];
           if (mergedTextarea) {
@@ -481,8 +505,6 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         }, 50);
         return;
       }
-
-      // If no merge possible and current not empty, allow default (which does nothing at position 0)
     }
 
     if (e.key === "Enter" && e.ctrlKey) {
@@ -526,8 +548,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   };
 
   const handleAutoResize = useCallback((textarea: HTMLTextAreaElement) => {
+    const savedScrollPosition = window.scrollY;
     textarea.style.height = "auto";
     textarea.style.height = Math.max(60, textarea.scrollHeight) + "px";
+    window.scrollTo(0, savedScrollPosition);
   }, []);
 
   return (
@@ -573,10 +597,21 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                   blockRefs.current[block.id] = el;
                 }}
                 value={block.content}
-                onChange={(e) =>
-                  updateBlock(block.id, { content: e.target.value })
-                }
+                onChange={(e) => {
+                  cursorPositionRef.current = e.target.selectionStart;
+                  updateBlock(block.id, { content: e.target.value });
+                }}
                 onFocus={() => setFocusedBlock(block.id)}
+                onClick={(e) => {
+                  cursorPositionRef.current = (
+                    e.target as HTMLTextAreaElement
+                  ).selectionStart;
+                }}
+                onKeyUp={(e) => {
+                  cursorPositionRef.current = (
+                    e.target as HTMLTextAreaElement
+                  ).selectionStart;
+                }}
                 onKeyDown={(e) => handleTextBlockKeyDown(e, block.id)}
                 placeholder={
                   blocks.filter((b) => b.type === "text" && b.content.trim())
@@ -755,11 +790,13 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                         "'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace",
                     }}
                     onInput={(e) => {
+                      const savedScrollPosition = window.scrollY;
                       const textarea = e.target as HTMLTextAreaElement;
                       const scrollHeight = textarea.scrollHeight;
                       const newHeight = Math.max(120, scrollHeight);
                       textarea.style.height = "auto";
                       textarea.style.height = newHeight + "px";
+                      window.scrollTo(0, savedScrollPosition);
                     }}
                   />
                 </div>
