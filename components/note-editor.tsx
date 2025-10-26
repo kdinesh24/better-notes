@@ -562,28 +562,23 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
 
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-4 mb-6 pb-4 border-b border-border">
+      <div className="flex items-center gap-2 mb-6">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={onClose}
           className="transition-all duration-200 hover:bg-accent"
         >
-          <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          Back
+          <ArrowLeftIcon className="h-5 w-5" />
         </Button>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           onClick={insertCodeBlock}
           className="transition-all duration-200 hover:bg-accent"
         >
-          <CodeBracketIcon className="h-4 w-4 mr-1" />
-          Code
+          <CodeBracketIcon className="h-5 w-5" />
         </Button>
-        <div className="text-sm text-muted-foreground ml-auto">
-          Press Ctrl+V to paste images
-        </div>
       </div>
 
       <input
