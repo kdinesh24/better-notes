@@ -135,8 +135,8 @@ export function NotesApp() {
                     priority
                   />
                 </div>
-                <h1 className="text-xl font-semibold tracking-tight">
-                  Better Notes
+                <h1 className="text-2xl font-semibold tracking-tight font-[family-name:var(--font-jersey-25)]">
+                  betternote
                 </h1>
               </div>
 
