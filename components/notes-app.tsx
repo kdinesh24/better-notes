@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { NotesGrid } from "./notes-grid";
 import { NoteEditor } from "./note-editor";
+import { FloatingNotesSidebar } from "./floating-notes-sidebar";
 import type { Note } from "@/types/note";
 import { generateId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -104,32 +106,62 @@ export function NotesApp() {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
+      {activeNote && (
+        <FloatingNotesSidebar
+          notes={notes}
+          activeNoteId={activeNoteId}
+          onNoteSelect={setActiveNoteId}
+        />
+      )}
+
       <div className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-10 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold tracking-tight">Notes</h1>
-            <div className="absolute left-1/2 transform -translate-x-1/2">
-              <div className="relative">
+        <div className="w-full px-8 py-3">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-8 flex-1">
+              <div className="flex items-center gap-3">
+                <div className="relative w-8 h-8">
+                  <Image
+                    src="/logo1.png"
+                    alt="Better Notes"
+                    fill
+                    className="object-contain dark:block hidden"
+                    priority
+                  />
+                  <Image
+                    src="/logo2.png"
+                    alt="Better Notes"
+                    fill
+                    className="object-contain dark:hidden block"
+                    priority
+                  />
+                </div>
+                <h1 className="text-xl font-semibold tracking-tight">
+                  Better Notes
+                </h1>
+              </div>
+
+              <div className="relative ml-20">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
                 <Input
                   placeholder="Search notes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
+                  className="pl-10 w-[32rem] bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
                 />
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="transition-all duration-200 hover:bg-accent"
+                className="transition-all duration-200 hover:bg-accent h-9 w-9"
               >
                 {theme === "dark" ? (
-                  <SunIcon className="h-4 w-4" />
+                  <SunIcon className="h-5 w-5" />
                 ) : (
-                  <MoonIcon className="h-4 w-4" />
+                  <MoonIcon className="h-5 w-5" />
                 )}
               </Button>
               <Button
@@ -137,7 +169,7 @@ export function NotesApp() {
                 size="sm"
                 className="bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 shadow-sm hover:shadow-md"
               >
-                <PlusIcon className="h-4 w-4 mr-1" />
+                <PlusIcon className="h-4 w-4 mr-1.5" />
                 New Note
               </Button>
             </div>

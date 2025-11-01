@@ -781,9 +781,8 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                     onInput={(e) => {
                       const savedScrollPosition = window.scrollY;
                       const textarea = e.target as HTMLTextAreaElement;
-                      const scrollHeight = textarea.scrollHeight;
-                      const newHeight = Math.max(120, scrollHeight);
                       textarea.style.height = "auto";
+                      const newHeight = Math.max(120, textarea.scrollHeight);
                       textarea.style.height = newHeight + "px";
                       window.scrollTo(0, savedScrollPosition);
                     }}
