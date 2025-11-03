@@ -92,10 +92,8 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         consolidated.push(block);
       }
 
-      if (
-        consolidated.length === 0 ||
-        consolidated.every((block) => block.type !== "text")
-      ) {
+      const lastBlock = consolidated[consolidated.length - 1];
+      if (!lastBlock || lastBlock.type !== "text") {
         consolidated.push({
           id: `text-${Date.now()}`,
           type: "text",
