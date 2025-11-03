@@ -116,8 +116,8 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
 
       const newBlocks: ContentBlock[] = [];
       let blockId = 1;
-      const usedImageIds = new Set<string>();
       const imageInstanceMap = new Map<string, number>();
+      const usedImageIds = new Set<string>();
 
       const combinedRegex =
         /((?:\[CODE:[^\]]*\][\s\S]*?\[\/CODE\])|(?:\[IMAGE:[^\]]+\]))/g;
@@ -226,11 +226,13 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
               imageData: image,
             });
           });
-          newBlocks.push({
-            id: `text-${Date.now()}`,
-            type: "text",
-            content: "",
-          });
+          if (newBlocks.filter((b) => b.type === "text").length === 0) {
+            newBlocks.push({
+              id: `text-${Date.now()}`,
+              type: "text",
+              content: "",
+            });
+          }
         }
       }
 

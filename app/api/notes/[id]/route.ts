@@ -66,67 +66,45 @@ export async function PATCH(
         .from(noteImages)
         .where(eq(noteImages.noteId, id));
 
-      const existingImagesByUrl = new Map(
-        existingImages.map((img) => [img.url, img]),
+      const existingImagesById = new Map(
+        existingImages.map((img) => [img.id, img]),
       );
 
-      await db.delete(noteImages).where(eq(noteImages.noteId, id));
+      const imageIdsToKeep = new Set(
+        imageData.map((img: { id: string }) => img.id),
+      );
+
+      const imagesToDelete = existingImages.filter(
+        (img) => !imageIdsToKeep.has(img.id),
+      );
+
+      for (const img of imagesToDelete) {
+        await db.delete(noteImages).where(eq(noteImages.id, img.id));
+      }
 
       const imageIdMap = new Map<string, string>();
 
-      if (imageData.length > 0) {
-        const imagesToInsert = imageData.map(
-          (img: { id: string; url: string; name: string }) => {
-            const existing = existingImagesByUrl.get(img.url);
-            return {
+      for (const img of imageData) {
+        if (existingImagesById.has(img.id)) {
+          imageIdMap.set(img.id, img.id);
+        } else {
+          const [insertedImage] = await db
+            .insert(noteImages)
+            .values({
               noteId: id,
               url: img.url,
               name: img.name,
-              originalId: img.id,
-              existingId: existing?.id,
-            };
-          },
-        );
+            })
+            .returning();
 
-        const insertedImages = await db
-          .insert(noteImages)
-          .values(
-            imagesToInsert.map(
-              (img: {
-                noteId: string;
-                url: string;
-                name: string;
-                originalId: string;
-                existingId?: string;
-              }) => ({
-                noteId: id,
-                url: img.url,
-                name: img.name,
-              }),
-            ),
-          )
-          .returning();
+          imageIdMap.set(img.id, insertedImage.id);
+        }
+      }
 
-        imagesToInsert.forEach(
-          (
-            oldImg: {
-              noteId: string;
-              url: string;
-              name: string;
-              originalId: string;
-              existingId?: string;
-            },
-            index: number,
-          ) => {
-            if (insertedImages[index]) {
-              imageIdMap.set(oldImg.originalId, insertedImages[index].id);
-            }
-          },
-        );
-
-        if (content !== undefined) {
-          let finalContent = content;
-          imageIdMap.forEach((newId, oldId) => {
+      if (content !== undefined) {
+        let finalContent = content;
+        imageIdMap.forEach((newId, oldId) => {
+          if (newId !== oldId) {
             finalContent = finalContent.replace(
               new RegExp(
                 `\\[IMAGE:${oldId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\]`,
@@ -134,11 +112,9 @@ export async function PATCH(
               ),
               `[IMAGE:${newId}]`,
             );
-          });
-          updateData.content = finalContent;
-        }
-      } else if (content !== undefined) {
-        updateData.content = content;
+          }
+        });
+        updateData.content = finalContent;
       }
     } else if (content !== undefined) {
       updateData.content = content;
