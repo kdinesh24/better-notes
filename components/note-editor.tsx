@@ -114,51 +114,100 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         return [{ id: "1", type: "text", content: "" }];
       }
 
-      const parts = content.split(
-        /((?:\[CODE:[^\]]*\][\s\S]*?\[\/CODE\])|(?:\[IMAGE:\d+\]))/g,
-      );
       const newBlocks: ContentBlock[] = [];
       let blockId = 1;
       const usedImageIds = new Set<string>();
+      const imageInstanceMap = new Map<string, number>();
+
+      const combinedRegex =
+        /((?:\[CODE:[^\]]*\][\s\S]*?\[\/CODE\])|(?:\[IMAGE:[^\]]+\]))/g;
+
+      const parts: Array<{
+        type: "text" | "image" | "code";
+        content: string;
+      }> = [];
+      let lastIndex = 0;
+      let match;
+
+      combinedRegex.lastIndex = 0;
+
+      while ((match = combinedRegex.exec(content)) !== null) {
+        if (match.index > lastIndex) {
+          const textContent = content.substring(lastIndex, match.index);
+          parts.push({
+            type: "text",
+            content: textContent,
+          });
+        }
+
+        if (match[0].startsWith("[IMAGE:")) {
+          parts.push({
+            type: "image",
+            content: match[0],
+          });
+        } else if (match[0].startsWith("[CODE:")) {
+          parts.push({
+            type: "code",
+            content: match[0],
+          });
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      if (lastIndex < content.length) {
+        parts.push({
+          type: "text",
+          content: content.substring(lastIndex),
+        });
+      }
 
       parts.forEach((part) => {
-        if (!part) return;
+        if (part.type === "image") {
+          const imageMatch = part.content.match(/\[IMAGE:([^\]]+)\]/);
+          if (imageMatch) {
+            const imageId = imageMatch[1];
+            usedImageIds.add(imageId);
+            const image = note.images?.find((img) => img.id === imageId);
+            if (image) {
+              const instanceNum = imageInstanceMap.get(imageId) || 0;
+              imageInstanceMap.set(imageId, instanceNum + 1);
+              newBlocks.push({
+                id: `image-${imageId}-${instanceNum}`,
+                type: "image",
+                content: "",
+                imageData: image,
+              });
+            }
+          }
+          return;
+        }
 
-        const imageMatch = part.match(/\[IMAGE:(\d+)\]/);
-        if (imageMatch) {
-          const imageId = imageMatch[1];
-          usedImageIds.add(imageId);
-          const image = note.images?.find((img) => img.id === imageId);
-          if (image) {
+        if (part.type === "code") {
+          const codeMatch = part.content.match(
+            /\[CODE:([^\]]*)\]([\s\S]*?)\[\/CODE\]/,
+          );
+          if (codeMatch) {
+            const [, language, code] = codeMatch;
             newBlocks.push({
-              id: `image-${imageId}`,
-              type: "image",
-              content: "",
-              imageData: image,
+              id: `code-${blockId++}`,
+              type: "code",
+              content: code.trim(),
+              language: language || "javascript",
             });
           }
           return;
         }
 
-        const codeMatch = part.match(/\[CODE:([^\]]*)\]([\s\S]*?)\[\/CODE\]/);
-        if (codeMatch) {
-          const [, language, code] = codeMatch;
-          newBlocks.push({
-            id: `code-${blockId++}`,
-            type: "code",
-            content: code.trim(),
-            language: language || "javascript",
-          });
-          return;
-        }
-
-        const cleanedPart = part.replace(/\[IMAGE:\d+\]/g, "").trim();
-        if (cleanedPart) {
-          newBlocks.push({
-            id: `text-${blockId++}`,
-            type: "text",
-            content: part.replace(/\[IMAGE:\d+\]/g, ""),
-          });
+        if (part.type === "text") {
+          const trimmedContent = part.content.trim();
+          if (trimmedContent) {
+            newBlocks.push({
+              id: `text-${blockId++}`,
+              type: "text",
+              content: part.content,
+            });
+          }
         }
       });
 
@@ -168,8 +217,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         );
         if (orphanedImages.length > 0) {
           orphanedImages.forEach((image) => {
+            const instanceNum = imageInstanceMap.get(image.id) || 0;
+            imageInstanceMap.set(image.id, instanceNum + 1);
             newBlocks.push({
-              id: `image-${image.id}`,
+              id: `image-${image.id}-${instanceNum}`,
               type: "image",
               content: "",
               imageData: image,
@@ -566,13 +617,20 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     }, 100);
   };
 
-  const removeImage = (imageId: string) => {
-    const newImages = note.images?.filter((img) => img.id !== imageId) || [];
-    onUpdate(note.id, { images: newImages });
+  const removeImage = (blockId: string, imageId: string) => {
     setBlocks((prev) => {
-      const filtered = prev.filter(
-        (block) => !(block.type === "image" && block.imageData?.id === imageId),
+      const filtered = prev.filter((block) => block.id !== blockId);
+
+      const hasOtherInstancesOfImage = filtered.some(
+        (block) => block.type === "image" && block.imageData?.id === imageId,
       );
+
+      if (!hasOtherInstancesOfImage) {
+        const newImages =
+          note.images?.filter((img) => img.id !== imageId) || [];
+        onUpdate(note.id, { images: newImages });
+      }
+
       return consolidateBlocks(filtered);
     });
   };
@@ -826,7 +884,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                   variant="destructive"
                   size="sm"
                   className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                  onClick={() => removeImage(block.imageData!.id)}
+                  onClick={() => removeImage(block.id, block.imageData!.id)}
                 >
                   <XMarkIcon className="h-3 w-3" />
                 </Button>
