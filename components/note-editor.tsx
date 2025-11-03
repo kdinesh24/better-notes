@@ -119,6 +119,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       );
       const newBlocks: ContentBlock[] = [];
       let blockId = 1;
+      const usedImageIds = new Set<string>();
 
       parts.forEach((part) => {
         if (!part) return;
@@ -126,6 +127,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         const imageMatch = part.match(/\[IMAGE:(\d+)\]/);
         if (imageMatch) {
           const imageId = imageMatch[1];
+          usedImageIds.add(imageId);
           const image = note.images?.find((img) => img.id === imageId);
           if (image) {
             newBlocks.push({
@@ -150,14 +152,36 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           return;
         }
 
-        if (part.trim()) {
+        const cleanedPart = part.replace(/\[IMAGE:\d+\]/g, "").trim();
+        if (cleanedPart) {
           newBlocks.push({
             id: `text-${blockId++}`,
             type: "text",
-            content: part,
+            content: part.replace(/\[IMAGE:\d+\]/g, ""),
           });
         }
       });
+
+      if (note.images && note.images.length > 0) {
+        const orphanedImages = note.images.filter(
+          (img) => !usedImageIds.has(img.id),
+        );
+        if (orphanedImages.length > 0) {
+          orphanedImages.forEach((image) => {
+            newBlocks.push({
+              id: `image-${image.id}`,
+              type: "image",
+              content: "",
+              imageData: image,
+            });
+          });
+          newBlocks.push({
+            id: `text-${Date.now()}`,
+            type: "text",
+            content: "",
+          });
+        }
+      }
 
       return consolidateBlocks(newBlocks);
     },

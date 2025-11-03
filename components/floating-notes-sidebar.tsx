@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface FloatingNotesSidebarProps {
   notes: Note[];
-  activeNoteId: string;
+  activeNoteId: string | null;
   onNoteSelect: (noteId: string) => void;
 }
 

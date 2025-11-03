@@ -21,36 +21,70 @@ export function NotesApp() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    const savedNotes = localStorage.getItem("better-notes");
-    if (savedNotes) {
-      const parsedNotes = JSON.parse(savedNotes);
-      setNotes(parsedNotes);
-    } else {
-      // Create a welcome note
-      const welcomeNote: Note = {
-        id: generateId(),
-        title: "Welcome to Better Notes",
-        content:
-          "Start typing to create your first note...\n\nFeatures:\n• Smooth typing experience\n• Ctrl+V to paste images\n• Code blocks with syntax highlighting\n• Beautiful light and dark themes",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        images: [],
-      };
-      setNotes([welcomeNote]);
-    }
+    setMounted(true);
   }, []);
 
-  // Save notes to localStorage whenever notes change
   useEffect(() => {
-    if (notes.length > 0) {
-      localStorage.setItem("better-notes", JSON.stringify(notes));
-    }
-  }, [notes]);
+    fetchNotes();
+  }, []);
 
-  const createNote = () => {
+  const fetchNotes = async () => {
+    try {
+      const response = await fetch("/api/notes");
+      if (response.ok) {
+        const data = await response.json();
+        const formattedNotes = data.map((note: any) => ({
+          ...note,
+          createdAt: new Date(note.createdAt),
+          updatedAt: new Date(note.updatedAt),
+        }));
+        setNotes(formattedNotes);
+
+        if (formattedNotes.length === 0) {
+          const welcomeNote: Note = {
+            id: generateId(),
+            title: "Welcome to Better Notes",
+            content:
+              "Start typing to create your first note...\n\nFeatures:\n• Smooth typing experience\n• Ctrl+V to paste images\n• Code blocks with syntax highlighting\n• Beautiful light and dark themes",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            images: [],
+          };
+          await createNoteInDB(welcomeNote);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+    }
+  };
+
+  const createNoteInDB = async (note: Note) => {
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(note),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const formattedNote = {
+          ...data,
+          createdAt: new Date(data.createdAt),
+          updatedAt: new Date(data.updatedAt),
+        };
+        setNotes((prev) => [formattedNote, ...prev]);
+        return formattedNote;
+      }
+    } catch (error) {
+      console.error("Error creating note:", error);
+    }
+  };
+
+  const createNote = async () => {
     const newNote: Note = {
       id: generateId(),
       title: "New Note",
@@ -59,26 +93,63 @@ export function NotesApp() {
       updatedAt: new Date(),
       images: [],
     };
-    setNotes((prev) => [newNote, ...prev]);
-    setActiveNoteId(newNote.id);
+    const createdNote = await createNoteInDB(newNote);
+    if (createdNote) {
+      setActiveNoteId(createdNote.id);
+    }
   };
 
-  const updateNote = (id: string, updates: Partial<Note>) => {
-    setNotes((prev) =>
-      prev.map((note) =>
-        note.id === id ? { ...note, ...updates, updatedAt: new Date() } : note,
-      ),
-    );
-  };
+  const updateNote = async (id: string, updates: Partial<Note>) => {
+    try {
+      setNotes((prev) =>
+        prev.map((note) =>
+          note.id === id
+            ? { ...note, ...updates, updatedAt: new Date() }
+            : note,
+        ),
+      );
 
-  const deleteNote = (id: string) => {
-    setNotes((prev) => {
-      const filtered = prev.filter((note) => note.id !== id);
-      if (activeNoteId === id) {
-        setActiveNoteId(null);
+      const response = await fetch(`/api/notes/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+
+        const formattedNote = {
+          ...data,
+          createdAt: new Date(data.createdAt),
+          updatedAt: new Date(data.updatedAt),
+        };
+        setNotes((prev) =>
+          prev.map((note) => (note.id === id ? formattedNote : note)),
+        );
       }
-      return filtered;
-    });
+    } catch (error) {
+      console.error("Error updating note:", error);
+    }
+  };
+
+  const deleteNote = async (id: string) => {
+    try {
+      const response = await fetch(`/api/notes/${id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setNotes((prev) => {
+          const filtered = prev.filter((note) => note.id !== id);
+          if (activeNoteId === id) {
+            setActiveNoteId(null);
+          }
+          return filtered;
+        });
+      }
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    }
   };
 
   const closeNote = () => {
@@ -158,11 +229,12 @@ export function NotesApp() {
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
                 className="transition-all duration-200 hover:bg-accent h-9 w-9"
               >
-                {theme === "dark" ? (
-                  <SunIcon className="h-5 w-5" />
-                ) : (
-                  <MoonIcon className="h-5 w-5" />
-                )}
+                {mounted &&
+                  (theme === "dark" ? (
+                    <SunIcon className="h-5 w-5" />
+                  ) : (
+                    <MoonIcon className="h-5 w-5" />
+                  ))}
               </Button>
               <Button
                 onClick={createNote}
@@ -177,7 +249,7 @@ export function NotesApp() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-6 min-h-screen">
         {activeNote ? (
           <NoteEditor
             note={activeNote}
