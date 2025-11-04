@@ -73,7 +73,7 @@ export function RecycleBin({
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
@@ -101,11 +101,11 @@ export function RecycleBin({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {deletedNotes.map((note) => (
             <div
               key={note.id}
-              className="border rounded-lg p-4 bg-card hover:shadow-md transition-shadow"
+              className="border rounded-lg p-3 sm:p-4 bg-card hover:shadow-md transition-shadow"
             >
               <div className="mb-3">
                 <h3 className="font-semibold truncate mb-1">{note.title}</h3>

@@ -255,10 +255,10 @@ export function NotesApp() {
       )}
 
       <div className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-10 transition-all duration-300">
-        <div className="w-full px-8 py-3">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="relative w-8 h-8">
+        <div className="w-full px-4 sm:px-6 md:px-8 py-3">
+          <div className="flex items-center gap-2 sm:gap-4 md:gap-6">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="relative w-7 h-7 sm:w-8 sm:h-8">
                 <Image
                   src="/logo1.png"
                   alt="Better Notes"
@@ -278,16 +278,30 @@ export function NotesApp() {
 
             <div className="flex-1"></div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <div className="relative">
-                <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
-                <Input
-                  placeholder="Search notes..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
-                />
-              </div>
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              {searchQuery ||
+              typeof window === "undefined" ||
+              window.innerWidth >= 640 ? (
+                <div className="relative">
+                  <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
+                  <Input
+                    placeholder="Search notes..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 w-40 md:w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
+                    autoFocus={searchQuery !== "" && window.innerWidth < 640}
+                  />
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSearchQuery(".")}
+                  className="transition-all duration-200 hover:bg-accent h-9 w-9"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </Button>
+              )}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -369,7 +383,7 @@ export function NotesApp() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
         {activeNote ? (
           <NoteEditor
             note={activeNote}

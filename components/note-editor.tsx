@@ -763,34 +763,34 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-2 mb-6">
+    <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500 px-2 sm:px-4">
+      <div className="flex items-center gap-1 sm:gap-2 mb-4 sm:mb-6">
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="transition-all duration-200 hover:bg-accent"
+          className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
         >
-          <ArrowLeftIcon className="h-5 w-5" />
+          <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           onClick={insertCodeBlock}
-          className="transition-all duration-200 hover:bg-accent"
+          className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
         >
-          <CodeBracketIcon className="h-5 w-5" />
+          <CodeBracketIcon className="h-4 w-4 sm:h-5 sm:w-5" />
         </Button>
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setIsPreviewMode(!isPreviewMode)}
-          className="transition-all duration-200 hover:bg-accent"
+          className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
         >
           {isPreviewMode ? (
-            <PencilIcon className="h-5 w-5" />
+            <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           ) : (
-            <EyeIcon className="h-5 w-5" />
+            <EyeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           )}
         </Button>
       </div>
@@ -800,7 +800,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Note title..."
-        className="w-full text-3xl font-bold bg-transparent border-none outline-none mb-6 placeholder:text-muted-foreground transition-colors"
+        className="w-full text-2xl sm:text-3xl font-bold bg-transparent border-none outline-none mb-4 sm:mb-6 placeholder:text-muted-foreground transition-colors"
       />
 
       <div className="space-y-4">

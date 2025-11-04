@@ -106,7 +106,7 @@ export default function RecycleBinPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-10">
-        <div className="w-full px-8 py-4">
+        <div className="w-full px-4 sm:px-6 md:px-8 py-3 sm:py-4">
           <Button
             variant="ghost"
             size="sm"
@@ -118,7 +118,7 @@ export default function RecycleBinPage() {
           </Button>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6">
         <RecycleBin
           deletedNotes={deletedNotes}
           onRestore={handleRestore}

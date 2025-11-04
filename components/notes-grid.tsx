@@ -86,11 +86,11 @@ export function NotesGrid({
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
         {notes.map((note, index) => (
           <div
             key={note.id}
-            className="note-card bg-card border border-border rounded-lg p-4 cursor-pointer relative group transition-all duration-300 hover:shadow-lg"
+            className="note-card bg-card border border-border rounded-lg p-3 sm:p-4 cursor-pointer relative group transition-all duration-300 hover:shadow-lg"
             onMouseEnter={() => setHoveredNote(note.id)}
             onMouseLeave={() => setHoveredNote(null)}
             onClick={() => onNoteSelect(note.id)}
