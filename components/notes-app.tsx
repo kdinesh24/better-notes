@@ -24,12 +24,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function NotesApp() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [isCreatingNote, setIsCreatingNote] = useState(false);
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
 
@@ -94,17 +100,24 @@ export function NotesApp() {
   };
 
   const createNote = async () => {
-    const newNote: Note = {
-      id: generateId(),
-      title: "New Note",
-      content: "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      images: [],
-    };
-    const createdNote = await createNoteInDB(newNote);
-    if (createdNote) {
-      setActiveNoteId(createdNote.id);
+    if (isCreatingNote) return;
+
+    setIsCreatingNote(true);
+    try {
+      const newNote: Note = {
+        id: generateId(),
+        title: "New Note",
+        content: "",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        images: [],
+      };
+      const createdNote = await createNoteInDB(newNote);
+      if (createdNote) {
+        setActiveNoteId(createdNote.id);
+      }
+    } finally {
+      setTimeout(() => setIsCreatingNote(false), 1000);
     }
   };
 
@@ -197,41 +210,37 @@ export function NotesApp() {
       <div className="border-b border-border bg-background/95 backdrop-blur-md sticky top-0 z-10 transition-all duration-300">
         <div className="w-full px-8 py-3">
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-8 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="relative w-8 h-8">
-                  <Image
-                    src="/logo1.png"
-                    alt="Better Notes"
-                    fill
-                    className="object-contain dark:block hidden"
-                    priority
-                  />
-                  <Image
-                    src="/logo2.png"
-                    alt="Better Notes"
-                    fill
-                    className="object-contain dark:hidden block"
-                    priority
-                  />
-                </div>
-                <h1 className="text-2xl font-semibold tracking-tight font-[family-name:var(--font-jersey-25)]">
-                  betternote
-                </h1>
+            <div className="flex items-center gap-3">
+              <div className="relative w-8 h-8">
+                <Image
+                  src="/logo1.png"
+                  alt="Better Notes"
+                  fill
+                  className="object-contain dark:block hidden"
+                  priority
+                />
+                <Image
+                  src="/logo2.png"
+                  alt="Better Notes"
+                  fill
+                  className="object-contain dark:hidden block"
+                  priority
+                />
               </div>
+            </div>
 
-              <div className="relative ml-20">
+            <div className="flex-1"></div>
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
                 <Input
                   placeholder="Search notes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 w-[32rem] bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
+                  className="pl-10 w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
                 />
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -247,14 +256,21 @@ export function NotesApp() {
               </Button>
               {session && (
                 <>
-                  <Button
-                    onClick={createNote}
-                    size="sm"
-                    className="bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    <PlusIcon className="h-4 w-4 mr-1.5" />
-                    New Note
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={createNote}
+                        disabled={isCreatingNote}
+                        size="sm"
+                        className="bg-white dark:bg-black text-black dark:text-white hover:bg-white/90 dark:hover:bg-black/90 transition-all duration-200 shadow-sm hover:shadow-md border border-border disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <PlusIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>New Note</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -291,7 +307,7 @@ export function NotesApp() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {activeNote ? (
           <NoteEditor
             note={activeNote}
