@@ -4,6 +4,7 @@ export interface Note {
   content: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt?: Date | null;
   images?: NoteImage[];
   linkPreviews?: NoteLinkPreview[];
 }

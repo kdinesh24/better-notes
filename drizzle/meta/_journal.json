@@ -15,6 +15,13 @@
       "when": 1762236362145,
       "tag": "0001_sudden_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762265179140,
+      "tag": "0002_lowly_reaper",
+      "breakpoints": true
     }
   ]
 }

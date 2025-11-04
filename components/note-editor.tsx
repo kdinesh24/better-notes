@@ -16,9 +16,15 @@ import {
   XMarkIcon,
   ChevronDownIcon,
   DocumentDuplicateIcon,
+  EyeIcon,
+  PencilIcon,
 } from "@heroicons/react/24/outline";
 import { cn, extractUrls } from "@/lib/utils";
 import { LinkPreview } from "@/components/link-preview";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 
 interface NoteEditorProps {
   note: Note;
@@ -66,6 +72,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     note.linkPreviews || [],
   );
   const [loadingLinks, setLoadingLinks] = useState<Set<string>>(new Set());
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const blockRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
   const isInitializedRef = useRef(false);
@@ -252,7 +259,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       noteIdRef.current = note.id;
       setTitle(note.title);
       setBlocks(parseContentToBlocks(note.content));
+      setLinkPreviews(note.linkPreviews || []);
+      lastProcessedContentRef.current = "";
       isInitializedRef.current = true;
+      window.scrollTo(0, 0);
     } else if (!isInitializedRef.current) {
       setBlocks(parseContentToBlocks(note.content));
       isInitializedRef.current = true;
@@ -268,6 +278,18 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       });
     }, 100);
   }, [blocks.length]);
+
+  useEffect(() => {
+    if (!isPreviewMode) {
+      setTimeout(() => {
+        Object.entries(blockRefs.current).forEach(([, textarea]) => {
+          if (textarea) {
+            handleAutoResize(textarea);
+          }
+        });
+      }, 50);
+    }
+  }, [isPreviewMode]);
 
   const fetchLinkPreview = useCallback(
     async (url: string) => {
@@ -569,12 +591,11 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   };
 
   const updateBlock = (blockId: string, updates: Partial<ContentBlock>) => {
-    setBlocks((prev) => {
-      const updated = prev.map((block) =>
+    setBlocks((prev) =>
+      prev.map((block) =>
         block.id === blockId ? { ...block, ...updates } : block,
-      );
-      return consolidateBlocks(updated);
-    });
+      ),
+    );
   };
 
   const removeBlock = (blockId: string) => {
@@ -760,6 +781,18 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         >
           <CodeBracketIcon className="h-5 w-5" />
         </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsPreviewMode(!isPreviewMode)}
+          className="transition-all duration-200 hover:bg-accent"
+        >
+          {isPreviewMode ? (
+            <PencilIcon className="h-5 w-5" />
+          ) : (
+            <EyeIcon className="h-5 w-5" />
+          )}
+        </Button>
       </div>
 
       <input
@@ -785,7 +818,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
 
         {blocks.map((block, index) => (
           <div key={block.id} className="group">
-            {block.type === "text" && (
+            {block.type === "text" && !isPreviewMode && (
               <textarea
                 ref={(el) => {
                   blockRefs.current[block.id] = el;
@@ -829,6 +862,21 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
                   handleAutoResize(e.target as HTMLTextAreaElement)
                 }
               />
+            )}
+
+            {block.type === "text" && isPreviewMode && (
+              <div className="prose prose-sm dark:prose-invert max-w-none min-h-[60px]">
+                {block.content.trim() ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw, rehypeSanitize]}
+                  >
+                    {block.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p className="text-muted-foreground italic">Empty block</p>
+                )}
+              </div>
             )}
 
             {block.type === "code" && (

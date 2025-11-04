@@ -235,12 +235,31 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    await db.delete(noteImages).where(eq(noteImages.noteId, id));
+    const [note] = await db
+      .select()
+      .from(notes)
+      .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)))
+      .limit(1);
+
+    if (!note) {
+      return NextResponse.json({ error: "Note not found" }, { status: 404 });
+    }
+
+    if (note.deletedAt) {
+      await db.delete(noteImages).where(eq(noteImages.noteId, id));
+      await db.delete(noteLinkPreviews).where(eq(noteLinkPreviews.noteId, id));
+      await db
+        .delete(notes)
+        .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)));
+      return NextResponse.json({ success: true, permanentlyDeleted: true });
+    }
+
     await db
-      .delete(notes)
+      .update(notes)
+      .set({ deletedAt: new Date() })
       .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)));
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, movedToRecycleBin: true });
   } catch (error) {
     console.error("Error deleting note:", error);
     return NextResponse.json(

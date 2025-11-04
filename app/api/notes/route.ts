@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { notes, noteImages, noteLinkPreviews } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 
@@ -11,49 +11,66 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const allNotes = await db
-      .select()
-      .from(notes)
-      .where(eq(notes.userId, session.user.id))
-      .orderBy(notes.updatedAt);
+    const [allNotes, allImages, allLinkPreviews] = await Promise.all([
+      db
+        .select()
+        .from(notes)
+        .where(and(eq(notes.userId, session.user.id), isNull(notes.deletedAt)))
+        .orderBy(notes.updatedAt),
+      db.select().from(noteImages),
+      db.select().from(noteLinkPreviews),
+    ]);
 
-    const notesWithImages = await Promise.all(
-      allNotes.map(async (note) => {
-        const images = await db
-          .select()
-          .from(noteImages)
-          .where(eq(noteImages.noteId, note.id));
-
-        const linkPreviews = await db
-          .select()
-          .from(noteLinkPreviews)
-          .where(eq(noteLinkPreviews.noteId, note.id));
-
-        return {
-          id: note.id,
-          title: note.title,
-          content: note.content,
-          createdAt: note.createdAt,
-          updatedAt: note.updatedAt,
-          images: images.map((img) => ({
-            id: img.id,
-            url: img.url,
-            name: img.name,
-          })),
-          linkPreviews: linkPreviews.map((preview) => ({
-            id: preview.id,
-            url: preview.url,
-            title: preview.title,
-            description: preview.description || undefined,
-            image: preview.image || undefined,
-            siteName: preview.siteName || undefined,
-            favicon: preview.favicon || undefined,
-          })),
-        };
-      }),
+    const imagesByNoteId = allImages.reduce(
+      (acc, img) => {
+        if (!acc[img.noteId]) acc[img.noteId] = [];
+        acc[img.noteId].push(img);
+        return acc;
+      },
+      {} as Record<string, typeof allImages>,
     );
 
-    return NextResponse.json(notesWithImages);
+    const previewsByNoteId = allLinkPreviews.reduce(
+      (acc, preview) => {
+        if (!acc[preview.noteId]) acc[preview.noteId] = [];
+        acc[preview.noteId].push(preview);
+        return acc;
+      },
+      {} as Record<string, typeof allLinkPreviews>,
+    );
+
+    const notesWithImages = allNotes.map((note) => {
+      const images = imagesByNoteId[note.id] || [];
+      const linkPreviews = previewsByNoteId[note.id] || [];
+
+      return {
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+        images: images.map((img) => ({
+          id: img.id,
+          url: img.url,
+          name: img.name,
+        })),
+        linkPreviews: linkPreviews.map((preview) => ({
+          id: preview.id,
+          url: preview.url,
+          title: preview.title,
+          description: preview.description || undefined,
+          image: preview.image || undefined,
+          siteName: preview.siteName || undefined,
+          favicon: preview.favicon || undefined,
+        })),
+      };
+    });
+
+    return NextResponse.json(notesWithImages, {
+      headers: {
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      },
+    });
   } catch (error) {
     console.error("Error fetching notes:", error);
     return NextResponse.json(
