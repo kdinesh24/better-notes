@@ -34,13 +34,26 @@ export function NotesGrid({
   const [hoveredNote, setHoveredNote] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
+  const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
 
   const handleQuickEdit = (
     note: Note,
     field: "title" | "content",
     value: string,
   ) => {
-    onNoteUpdate(note.id, { [field]: value });
+    setEditingNotes((prev) => ({ ...prev, [note.id]: value }));
+  };
+
+  const handleBlur = (note: Note, field: "title" | "content") => {
+    const newValue = editingNotes[note.id];
+    if (newValue !== undefined && newValue !== note[field]) {
+      onNoteUpdate(note.id, { [field]: newValue });
+    }
+    setEditingNotes((prev) => {
+      const updated = { ...prev };
+      delete updated[note.id];
+      return updated;
+    });
   };
 
   const handleDeleteClick = (e: React.MouseEvent, noteId: string) => {
@@ -96,8 +109,9 @@ export function NotesGrid({
 
             <input
               type="text"
-              value={note.title}
+              value={editingNotes[note.id] ?? note.title}
               onChange={(e) => handleQuickEdit(note, "title", e.target.value)}
+              onBlur={() => handleBlur(note, "title")}
               onClick={(e) => e.stopPropagation()}
               className="w-full bg-transparent border-none outline-none text-base font-medium mb-3 resize-none transition-colors placeholder:text-muted-foreground"
               placeholder="Note title..."
@@ -124,6 +138,54 @@ export function NotesGrid({
                 )}
               </div>
             )}
+
+            {note.linkPreviews &&
+              note.linkPreviews.length > 0 &&
+              note.linkPreviews[0] && (
+                <div className="mb-3">
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (note.linkPreviews?.[0]?.url) {
+                        window.open(
+                          note.linkPreviews[0].url,
+                          "_blank",
+                          "noopener,noreferrer",
+                        );
+                      }
+                    }}
+                    className="flex gap-2 p-2 border rounded bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                  >
+                    {note.linkPreviews[0].image && (
+                      <img
+                        src={note.linkPreviews[0].image}
+                        alt={note.linkPreviews[0].title}
+                        className="w-10 h-10 object-cover rounded flex-shrink-0"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = "none";
+                        }}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium line-clamp-1 mb-0.5">
+                        {note.linkPreviews[0].title}
+                      </div>
+                      {note.linkPreviews[0].description && (
+                        <div className="text-[10px] text-muted-foreground line-clamp-1">
+                          {note.linkPreviews[0].description}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {note.linkPreviews.length > 1 && (
+                    <div className="text-[10px] text-muted-foreground text-center mt-1">
+                      +{note.linkPreviews.length - 1} more link
+                      {note.linkPreviews.length - 1 > 1 ? "s" : ""}
+                    </div>
+                  )}
+                </div>
+              )}
 
             <div className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(note.updatedAt), {

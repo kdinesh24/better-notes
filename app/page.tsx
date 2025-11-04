@@ -1,11 +1,14 @@
-"use client"
-import { NotesApp } from "@/components/notes-app"
-import { ThemeProvider } from "@/components/theme-provider"
+"use client";
+import { NotesApp } from "@/components/notes-app";
+import { ThemeProvider } from "@/components/theme-provider";
+import { SessionProvider } from "next-auth/react";
 
 export default function Home() {
   return (
-    <ThemeProvider>
-      <NotesApp />
-    </ThemeProvider>
-  )
+    <SessionProvider>
+      <ThemeProvider>
+        <NotesApp />
+      </ThemeProvider>
+    </SessionProvider>
+  );
 }

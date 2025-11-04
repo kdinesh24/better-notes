@@ -1,18 +1,24 @@
 import { db } from "@/lib/db";
-import { notes, noteImages } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { notes, noteImages, noteLinkPreviews } from "@/lib/db/schema";
+import { eq, and } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const [note] = await db
       .select()
       .from(notes)
-      .where(eq(notes.id, id))
+      .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)))
       .limit(1);
 
     if (!note) {
@@ -24,6 +30,11 @@ export async function GET(
       .from(noteImages)
       .where(eq(noteImages.noteId, id));
 
+    const linkPreviews = await db
+      .select()
+      .from(noteLinkPreviews)
+      .where(eq(noteLinkPreviews.noteId, id));
+
     return NextResponse.json({
       id: note.id,
       title: note.title,
@@ -34,6 +45,15 @@ export async function GET(
         id: img.id,
         url: img.url,
         name: img.name,
+      })),
+      linkPreviews: linkPreviews.map((preview) => ({
+        id: preview.id,
+        url: preview.url,
+        title: preview.title,
+        description: preview.description || undefined,
+        image: preview.image || undefined,
+        siteName: preview.siteName || undefined,
+        favicon: preview.favicon || undefined,
       })),
     });
   } catch (error) {
@@ -50,15 +70,43 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     const body = await request.json();
-    const { title, content, images: imageData } = body;
+    const {
+      title,
+      content,
+      images: imageData,
+      linkPreviews: linkPreviewData,
+    } = body;
 
     const updateData: any = {
       updatedAt: new Date(),
     };
 
     if (title !== undefined) updateData.title = title;
+
+    if (linkPreviewData !== undefined) {
+      await db.delete(noteLinkPreviews).where(eq(noteLinkPreviews.noteId, id));
+
+      if (linkPreviewData.length > 0) {
+        await db.insert(noteLinkPreviews).values(
+          linkPreviewData.map((preview: any) => ({
+            noteId: id,
+            url: preview.url,
+            title: preview.title,
+            description: preview.description || null,
+            image: preview.image || null,
+            siteName: preview.siteName || null,
+            favicon: preview.favicon || null,
+          })),
+        );
+      }
+    }
 
     if (imageData !== undefined) {
       const existingImages = await db
@@ -123,7 +171,7 @@ export async function PATCH(
     const [updatedNote] = await db
       .update(notes)
       .set(updateData)
-      .where(eq(notes.id, id))
+      .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)))
       .returning();
 
     if (!updatedNote) {
@@ -134,6 +182,11 @@ export async function PATCH(
       .select()
       .from(noteImages)
       .where(eq(noteImages.noteId, id));
+
+    const linkPreviews = await db
+      .select()
+      .from(noteLinkPreviews)
+      .where(eq(noteLinkPreviews.noteId, id));
 
     console.log(
       "[PATCH] Saved successfully, returning",
@@ -152,6 +205,15 @@ export async function PATCH(
         url: img.url,
         name: img.name,
       })),
+      linkPreviews: linkPreviews.map((preview) => ({
+        id: preview.id,
+        url: preview.url,
+        title: preview.title,
+        description: preview.description || undefined,
+        image: preview.image || undefined,
+        siteName: preview.siteName || undefined,
+        favicon: preview.favicon || undefined,
+      })),
     });
   } catch (error) {
     console.error("Error updating note:", error);
@@ -167,9 +229,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = await params;
     await db.delete(noteImages).where(eq(noteImages.noteId, id));
-    await db.delete(notes).where(eq(notes.id, id));
+    await db
+      .delete(notes)
+      .where(and(eq(notes.id, id), eq(notes.userId, session.user.id)));
 
     return NextResponse.json({ success: true });
   } catch (error) {

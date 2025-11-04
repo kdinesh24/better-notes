@@ -14,8 +14,16 @@ import {
   MagnifyingGlassIcon,
   SunIcon,
   MoonIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
+import { signOut, useSession } from "next-auth/react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function NotesApp() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -23,6 +31,7 @@ export function NotesApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -236,14 +245,47 @@ export function NotesApp() {
                     <MoonIcon className="h-5 w-5" />
                   ))}
               </Button>
-              <Button
-                onClick={createNote}
-                size="sm"
-                className="bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                <PlusIcon className="h-4 w-4 mr-1.5" />
-                New Note
-              </Button>
+              {session && (
+                <>
+                  <Button
+                    onClick={createNote}
+                    size="sm"
+                    className="bg-foreground text-background hover:bg-foreground/90 transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-1.5" />
+                    New Note
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="transition-all duration-200 hover:bg-accent h-9 w-9 rounded-full"
+                      >
+                        {session.user?.image ? (
+                          <Image
+                            src={session.user.image}
+                            alt={session.user.name || "User"}
+                            width={32}
+                            height={32}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <UserIcon className="h-5 w-5" />
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => signOut({ callbackUrl: "/login" })}
+                        className="cursor-pointer"
+                      >
+                        Logout
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              )}
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Note } from "@/types/note";
+import type { Note, NoteLinkPreview } from "@/types/note";
 import {
   ArrowLeftIcon,
   CodeBracketIcon,
@@ -17,7 +17,8 @@ import {
   ChevronDownIcon,
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
-import { cn } from "@/lib/utils";
+import { cn, extractUrls } from "@/lib/utils";
+import { LinkPreview } from "@/components/link-preview";
 
 interface NoteEditorProps {
   note: Note;
@@ -27,10 +28,11 @@ interface NoteEditorProps {
 
 interface ContentBlock {
   id: string;
-  type: "text" | "code" | "image";
+  type: "text" | "code" | "image" | "link";
   content: string;
   language?: string;
   imageData?: { id: string; url: string; name: string };
+  linkData?: NoteLinkPreview;
 }
 
 const LANGUAGES = [
@@ -60,11 +62,17 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [focusedBlock, setFocusedBlock] = useState<string | null>(null);
+  const [linkPreviews, setLinkPreviews] = useState<NoteLinkPreview[]>(
+    note.linkPreviews || [],
+  );
+  const [loadingLinks, setLoadingLinks] = useState<Set<string>>(new Set());
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const blockRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
   const isInitializedRef = useRef(false);
   const cursorPositionRef = useRef<number>(0);
   const noteIdRef = useRef(note.id);
+  const lastProcessedContentRef = useRef("");
+  const linkPreviewsUpdateTimeoutRef = useRef<NodeJS.Timeout>();
 
   const consolidateBlocks = useCallback(
     (blocks: ContentBlock[]): ContentBlock[] => {
@@ -261,6 +269,89 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     }, 100);
   }, [blocks.length]);
 
+  const fetchLinkPreview = useCallback(
+    async (url: string) => {
+      if (loadingLinks.has(url)) return;
+      const existingPreview = linkPreviews.find((p) => p.url === url);
+      if (existingPreview) return;
+
+      setLoadingLinks((prev) => new Set(prev).add(url));
+
+      try {
+        const response = await fetch("/api/link-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url }),
+        });
+
+        if (response.ok) {
+          const previewData = await response.json();
+          const newPreview: NoteLinkPreview = {
+            id: `preview-${Date.now()}`,
+            ...previewData,
+          };
+
+          setLinkPreviews((prev) => [...prev, newPreview]);
+          onUpdate(note.id, {
+            linkPreviews: [...linkPreviews, newPreview],
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch link preview:", error);
+      } finally {
+        setLoadingLinks((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(url);
+          return newSet;
+        });
+      }
+    },
+    [loadingLinks, linkPreviews, note.id, onUpdate],
+  );
+
+  const detectAndFetchLinks = useCallback(
+    (content: string) => {
+      if (content === lastProcessedContentRef.current) return;
+      lastProcessedContentRef.current = content;
+
+      const urls = extractUrls(content);
+
+      const filteredPreviews = linkPreviews.filter((preview) =>
+        urls.includes(preview.url),
+      );
+
+      if (filteredPreviews.length !== linkPreviews.length) {
+        setLinkPreviews(filteredPreviews);
+      }
+
+      urls.forEach((url) => {
+        fetchLinkPreview(url);
+      });
+    },
+    [fetchLinkPreview, linkPreviews],
+  );
+
+  useEffect(() => {
+    if (linkPreviewsUpdateTimeoutRef.current) {
+      clearTimeout(linkPreviewsUpdateTimeoutRef.current);
+    }
+
+    linkPreviewsUpdateTimeoutRef.current = setTimeout(() => {
+      const currentPreviewUrls = (note.linkPreviews || [])
+        .map((p) => p.url)
+        .sort()
+        .join(",");
+      const newPreviewUrls = linkPreviews
+        .map((p) => p.url)
+        .sort()
+        .join(",");
+
+      if (currentPreviewUrls !== newPreviewUrls) {
+        onUpdate(note.id, { linkPreviews });
+      }
+    }, 300);
+  }, [linkPreviews, note.id, note.linkPreviews, onUpdate]);
+
   const saveContent = useCallback(
     (newBlocks: ContentBlock[]) => {
       if (saveTimeoutRef.current) {
@@ -283,10 +374,11 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
           .join("\n\n")
           .replace(/\n{3,}/g, "\n\n");
 
+        detectAndFetchLinks(content);
         onUpdate(note.id, { title, content });
       }, 500);
     },
-    [note.id, onUpdate, title],
+    [note.id, onUpdate, title, detectAndFetchLinks],
   );
 
   useEffect(() => {
@@ -635,6 +727,13 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     });
   };
 
+  const removeLinkPreview = (previewId: string) => {
+    setLinkPreviews((prev) => prev.filter((p) => p.id !== previewId));
+    onUpdate(note.id, {
+      linkPreviews: linkPreviews.filter((p) => p.id !== previewId),
+    });
+  };
+
   const handleAutoResize = useCallback((textarea: HTMLTextAreaElement) => {
     const savedScrollPosition = window.scrollY;
     textarea.style.height = "auto";
@@ -672,6 +771,18 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
       />
 
       <div className="space-y-4">
+        {linkPreviews.length > 0 && (
+          <div className="space-y-2">
+            {linkPreviews.map((preview) => (
+              <LinkPreview
+                key={preview.id}
+                preview={preview}
+                onRemove={removeLinkPreview}
+              />
+            ))}
+          </div>
+        )}
+
         {blocks.map((block, index) => (
           <div key={block.id} className="group">
             {block.type === "text" && (

@@ -1,13 +1,20 @@
 import { db } from "@/lib/db";
-import { notes, noteImages } from "@/lib/db/schema";
+import { notes, noteImages, noteLinkPreviews } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth/auth";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const allNotes = await db
       .select()
       .from(notes)
+      .where(eq(notes.userId, session.user.id))
       .orderBy(notes.updatedAt);
 
     const notesWithImages = await Promise.all(
@@ -16,6 +23,11 @@ export async function GET() {
           .select()
           .from(noteImages)
           .where(eq(noteImages.noteId, note.id));
+
+        const linkPreviews = await db
+          .select()
+          .from(noteLinkPreviews)
+          .where(eq(noteLinkPreviews.noteId, note.id));
 
         return {
           id: note.id,
@@ -28,8 +40,17 @@ export async function GET() {
             url: img.url,
             name: img.name,
           })),
+          linkPreviews: linkPreviews.map((preview) => ({
+            id: preview.id,
+            url: preview.url,
+            title: preview.title,
+            description: preview.description || undefined,
+            image: preview.image || undefined,
+            siteName: preview.siteName || undefined,
+            favicon: preview.favicon || undefined,
+          })),
         };
-      })
+      }),
     );
 
     return NextResponse.json(notesWithImages);
@@ -37,19 +58,25 @@ export async function GET() {
     console.error("Error fetching notes:", error);
     return NextResponse.json(
       { error: "Failed to fetch notes" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { title, content, images: imageData } = body;
 
     const [newNote] = await db
       .insert(notes)
       .values({
+        userId: session.user.id,
         title: title || "New Note",
         content: content || "",
       })
@@ -61,7 +88,7 @@ export async function POST(request: Request) {
           noteId: newNote.id,
           url: img.url,
           name: img.name,
-        }))
+        })),
       );
     }
 
@@ -69,6 +96,11 @@ export async function POST(request: Request) {
       .select()
       .from(noteImages)
       .where(eq(noteImages.noteId, newNote.id));
+
+    const linkPreviews = await db
+      .select()
+      .from(noteLinkPreviews)
+      .where(eq(noteLinkPreviews.noteId, newNote.id));
 
     return NextResponse.json({
       id: newNote.id,
@@ -81,12 +113,21 @@ export async function POST(request: Request) {
         url: img.url,
         name: img.name,
       })),
+      linkPreviews: linkPreviews.map((preview) => ({
+        id: preview.id,
+        url: preview.url,
+        title: preview.title,
+        description: preview.description || undefined,
+        image: preview.image || undefined,
+        siteName: preview.siteName || undefined,
+        favicon: preview.favicon || undefined,
+      })),
     });
   } catch (error) {
     console.error("Error creating note:", error);
     return NextResponse.json(
       { error: "Failed to create note" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
