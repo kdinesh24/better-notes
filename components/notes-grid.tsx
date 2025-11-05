@@ -7,6 +7,7 @@ import type { Note } from "@/types/note";
 import { Button } from "@/components/ui/button";
 import { TrashIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import { formatDistanceToNow } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ export function NotesGrid({
   onNoteDelete,
   onNoteUpdate,
 }: NotesGridProps) {
+  const isMobile = useIsMobile();
   const [hoveredNote, setHoveredNote] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState<string | null>(null);
@@ -95,11 +97,15 @@ export function NotesGrid({
             onMouseLeave={() => setHoveredNote(null)}
             onClick={() => onNoteSelect(note.id)}
           >
-            {hoveredNote === note.id && (
+            {(isMobile || hoveredNote === note.id) && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground [&:hover_svg]:text-white"
+                className={
+                  isMobile
+                    ? "absolute top-2 right-2 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground [&:hover_svg]:text-white"
+                    : "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:bg-destructive hover:text-destructive-foreground [&:hover_svg]:text-white"
+                }
                 onClick={(e) => handleDeleteClick(e, note.id)}
               >
                 <TrashIcon className="h-4 w-4" />
