@@ -762,6 +762,24 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     window.scrollTo(0, savedScrollPosition);
   }, []);
 
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      const lastTextBlock = [...blocks]
+        .reverse()
+        .find((b) => b.type === "text");
+      if (lastTextBlock) {
+        const textarea = blockRefs.current[lastTextBlock.id];
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(
+            textarea.value.length,
+            textarea.value.length,
+          );
+        }
+      }
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500 px-2 sm:px-4">
       <div className="flex items-center gap-1 sm:gap-2 mb-4 sm:mb-6">
@@ -803,7 +821,10 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         className="w-full text-2xl sm:text-3xl font-bold bg-transparent border-none outline-none mb-4 sm:mb-6 placeholder:text-muted-foreground transition-colors"
       />
 
-      <div className="space-y-4">
+      <div
+        className="space-y-4 min-h-[calc(100vh-300px)] cursor-text"
+        onClick={handleContainerClick}
+      >
         {linkPreviews.length > 0 && (
           <div className="space-y-2">
             {linkPreviews.map((preview) => (
@@ -817,7 +838,22 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
         )}
 
         {blocks.map((block, index) => (
-          <div key={block.id} className="group">
+          <div
+            key={block.id}
+            className="group"
+            onClick={(e) => {
+              if (e.target === e.currentTarget && block.type === "text") {
+                const textarea = blockRefs.current[block.id];
+                if (textarea) {
+                  textarea.focus();
+                  textarea.setSelectionRange(
+                    textarea.value.length,
+                    textarea.value.length,
+                  );
+                }
+              }
+            }}
+          >
             {block.type === "text" && !isPreviewMode && (
               <textarea
                 ref={(el) => {
