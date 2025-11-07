@@ -15,7 +15,10 @@ import {
   SunIcon,
   MoonIcon,
   UserIcon,
-  TrashIcon,
+  ArchiveBoxIcon,
+  DocumentTextIcon,
+  ClockIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
 import { signOut, useSession } from "next-auth/react";
@@ -30,12 +33,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "@/components/ui/command";
 import { notesDB } from "@/lib/db/indexeddb";
 
 export function NotesApp() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [commandOpen, setCommandOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +61,18 @@ export function NotesApp() {
 
   useEffect(() => {
     loadNotesInstantly();
+  }, []);
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setCommandOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
   }, []);
 
   const loadNotesInstantly = async () => {
@@ -89,7 +113,7 @@ export function NotesApp() {
             id: generateId(),
             title: "Welcome to Better Notes",
             content:
-              "Start typing to create your first note...\n\nFeatures:\n• Smooth typing experience\n• Ctrl+V to paste images\n• Code blocks with syntax highlighting\n• Beautiful light and dark themes",
+              "Start typing to create your first note...\n\nFeatures:\n• Smooth typing experience\n• Ctrl+K to search notes\n• Ctrl+V to paste images\n• Code blocks with syntax highlighting\n• Beautiful light and dark themes",
             createdAt: new Date(),
             updatedAt: new Date(),
             images: [],
@@ -244,8 +268,59 @@ export function NotesApp() {
 
   const activeNote = notes.find((note) => note.id === activeNoteId);
 
+  const formatDate = (date: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return `${Math.floor(days / 365)} years ago`;
+  };
+
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
   return (
     <div className="min-h-screen bg-background transition-colors duration-300">
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
+        <CommandInput placeholder="Search notes..." autoFocus />
+        <CommandList>
+          <CommandEmpty>No notes found.</CommandEmpty>
+          <CommandGroup>
+            {notes
+              .sort(
+                (a, b) =>
+                  new Date(b.updatedAt).getTime() -
+                  new Date(a.updatedAt).getTime(),
+              )
+              .map((note) => (
+                <CommandItem
+                  key={note.id}
+                  value={`${note.title} ${note.content}`}
+                  onSelect={() => {
+                    setActiveNoteId(note.id);
+                    setCommandOpen(false);
+                  }}
+                  className="flex items-start gap-3 px-3 py-2.5 cursor-pointer"
+                >
+                  <DocumentTextIcon className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-normal text-sm truncate">
+                      {note.title || "Untitled"}
+                    </div>
+                  </div>
+                </CommandItem>
+              ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+
       {activeNote && (
         <FloatingNotesSidebar
           notes={notes}
@@ -288,15 +363,31 @@ export function NotesApp() {
                     placeholder="Search notes..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 w-40 md:w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200"
+                    onClick={() => {
+                      if (!searchQuery) {
+                        setCommandOpen(true);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (!searchQuery) {
+                        setCommandOpen(true);
+                      }
+                    }}
+                    className="pl-10 w-40 md:w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200 cursor-pointer"
+                    readOnly={!searchQuery}
                     autoFocus={searchQuery !== "" && window.innerWidth < 640}
                   />
+                  {!searchQuery && (
+                    <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                      <span className="text-xs">⌘</span>K
+                    </kbd>
+                  )}
                 </div>
               ) : (
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setSearchQuery(".")}
+                  onClick={() => setCommandOpen(true)}
                   className="transition-all duration-200 hover:bg-accent h-9 w-9"
                 >
                   <MagnifyingGlassIcon className="h-5 w-5" />
@@ -310,7 +401,7 @@ export function NotesApp() {
                     onClick={() => (window.location.href = "/recycle-bin")}
                     className="transition-all duration-200 hover:bg-accent h-9 w-9"
                   >
-                    <TrashIcon className="h-5 w-5" />
+                    <ArchiveBoxIcon className="h-5 w-5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -372,6 +463,7 @@ export function NotesApp() {
                         onClick={() => signOut({ callbackUrl: "/login" })}
                         className="cursor-pointer"
                       >
+                        <ArrowRightOnRectangleIcon className="h-4 w-4 mr-2" />
                         Logout
                       </DropdownMenuItem>
                     </DropdownMenuContent>
