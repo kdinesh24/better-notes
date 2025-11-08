@@ -291,6 +291,13 @@
     background: #333333;
   }
 
+  /* Safe area support for mobile devices */
+  @supports (padding-bottom: env(safe-area-inset-bottom)) {
+    .floating-nav-safe-area {
+      padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    }
+  }
+
   /* Line clamp utility */
   .line-clamp-2 {
     display: -webkit-box;

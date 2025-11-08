@@ -5,6 +5,7 @@ import Image from "next/image";
 import { NotesGrid } from "./notes-grid";
 import { NoteEditor } from "./note-editor";
 import { FloatingNotesSidebar } from "./floating-notes-sidebar";
+import { FloatingNav } from "./floating-nav";
 import type { Note } from "@/types/note";
 import { generateId } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -51,12 +52,20 @@ export function NotesApp() {
   const [mounted, setMounted] = useState(false);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { theme, setTheme } = useTheme();
   const { data: session } = useSession();
   const syncInProgress = useRef(false);
 
   useEffect(() => {
     setMounted(true);
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   useEffect(() => {
@@ -256,6 +265,7 @@ export function NotesApp() {
         deleteNote(activeNoteId);
       } else {
         setActiveNoteId(null);
+        setIsPreviewMode(false);
       }
     }
   };
@@ -267,6 +277,11 @@ export function NotesApp() {
   );
 
   const activeNote = notes.find((note) => note.id === activeNoteId);
+
+  const insertCodeBlock = () => {
+    const event = new CustomEvent("insertCodeBlock");
+    window.dispatchEvent(event);
+  };
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -354,9 +369,7 @@ export function NotesApp() {
             <div className="flex-1"></div>
 
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              {searchQuery ||
-              typeof window === "undefined" ||
-              window.innerWidth >= 640 ? (
+              {!mounted || searchQuery || !isMobile ? (
                 <div className="relative">
                   <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground transition-colors" />
                   <Input
@@ -375,7 +388,6 @@ export function NotesApp() {
                     }}
                     className="pl-10 w-40 md:w-64 bg-muted/50 border-0 focus-visible:ring-1 focus-visible:ring-ring transition-all duration-200 cursor-pointer"
                     readOnly={!searchQuery}
-                    autoFocus={searchQuery !== "" && window.innerWidth < 640}
                   />
                   {!searchQuery && (
                     <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
@@ -481,6 +493,9 @@ export function NotesApp() {
             note={activeNote}
             onUpdate={updateNote}
             onClose={closeNote}
+            onInsertCode={insertCodeBlock}
+            onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
+            isPreviewMode={isPreviewMode}
           />
         ) : isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -505,6 +520,15 @@ export function NotesApp() {
           />
         )}
       </div>
+
+      {activeNote && (
+        <FloatingNav
+          onBack={closeNote}
+          onInsertCode={insertCodeBlock}
+          onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
+          isPreviewMode={isPreviewMode}
+        />
+      )}
     </div>
   );
 }

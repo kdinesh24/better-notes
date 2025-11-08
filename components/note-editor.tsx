@@ -35,6 +35,9 @@ interface NoteEditorProps {
   note: Note;
   onUpdate: (id: string, updates: Partial<Note>) => void;
   onClose: () => void;
+  onInsertCode: () => void;
+  onTogglePreview: () => void;
+  isPreviewMode: boolean;
 }
 
 interface ContentBlock {
@@ -69,7 +72,14 @@ const LANGUAGES = [
   { value: "yaml", label: "YAML" },
 ];
 
-export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
+export function NoteEditor({
+  note,
+  onUpdate,
+  onClose,
+  onInsertCode,
+  onTogglePreview,
+  isPreviewMode: externalIsPreviewMode,
+}: NoteEditorProps) {
   const [title, setTitle] = useState(note.title);
   const [blocks, setBlocks] = useState<ContentBlock[]>([]);
   const [focusedBlock, setFocusedBlock] = useState<string | null>(null);
@@ -77,7 +87,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     note.linkPreviews || [],
   );
   const [loadingLinks, setLoadingLinks] = useState<Set<string>>(new Set());
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const isPreviewMode = externalIsPreviewMode;
   const saveTimeoutRef = useRef<NodeJS.Timeout>();
   const blockRefs = useRef<{ [key: string]: HTMLTextAreaElement | null }>({});
   const isInitializedRef = useRef(false);
@@ -549,6 +559,17 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
     };
   }, [handlePaste]);
 
+  useEffect(() => {
+    const handleInsertCodeBlock = () => {
+      insertCodeBlock();
+    };
+
+    window.addEventListener("insertCodeBlock", handleInsertCodeBlock);
+    return () => {
+      window.removeEventListener("insertCodeBlock", handleInsertCodeBlock);
+    };
+  }, [focusedBlock, consolidateBlocks]);
+
   const insertCodeBlock = () => {
     const newBlockId = `code-${Date.now()}`;
     const newTextBlockId = `text-${Date.now() + 1}`;
@@ -786,59 +807,7 @@ export function NoteEditor({ note, onUpdate, onClose }: NoteEditorProps) {
   };
 
   return (
-    <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500 px-2 sm:px-4">
-      <div className="flex items-center gap-1 sm:gap-2 mb-4 sm:mb-6">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
-            >
-              <ArrowLeftIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Back</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={insertCodeBlock}
-              className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
-            >
-              <CodeBracketIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Code Block</p>
-          </TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsPreviewMode(!isPreviewMode)}
-              className="transition-all duration-200 hover:bg-accent h-8 w-8 sm:h-10 sm:w-10"
-            >
-              {isPreviewMode ? (
-                <PencilIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              ) : (
-                <EyeIcon className="h-4 w-4 sm:h-5 sm:w-5" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isPreviewMode ? "Edit Mode" : "Preview Mode"}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-
+    <div className="max-w-4xl mx-auto animate-in fade-in-0 slide-in-from-bottom-4 duration-500 px-2 sm:px-4 pb-40 sm:pb-32">
       <input
         type="text"
         value={title}

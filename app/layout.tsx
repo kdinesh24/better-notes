@@ -6,6 +6,7 @@ import { DotGothic16 } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Suspense } from "react";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const jersey25 = DotGothic16({
@@ -22,6 +23,12 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo1.png",
     apple: "/logo1.png",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    viewportFit: "cover",
   },
 };
 
@@ -41,7 +48,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange={false}
         >
-          <Suspense fallback={null}>{children}</Suspense>
+          <TooltipProvider delayDuration={0}>
+            <Suspense fallback={null}>{children}</Suspense>
+          </TooltipProvider>
         </ThemeProvider>
         <Analytics />
       </body>
