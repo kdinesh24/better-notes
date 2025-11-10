@@ -10,11 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
   ArrowLeftIcon,
   CodeBracketIcon,
   EyeIcon,
@@ -71,77 +66,49 @@ export function FloatingNav({
           minWidth: "fit-content",
         }}
       >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onBack}
-              className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
-            >
-              <ArrowLeftIcon className="h-4 w-4 sm:h-4 sm:w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Back</p>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
+        >
+          <ArrowLeftIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+        </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onInsertCode}
-              className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
-            >
-              <CodeBracketIcon className="h-4 w-4 sm:h-4 sm:w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Insert Code Block</p>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onInsertCode}
+          className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
+        >
+          <CodeBracketIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+        </Button>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onTogglePreview}
-              className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
-            >
-              {isPreviewMode ? (
-                <PencilIcon className="h-4 w-4 sm:h-4 sm:w-4" />
-              ) : (
-                <EyeIcon className="h-4 w-4 sm:h-4 sm:w-4" />
-              )}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{isPreviewMode ? "Edit Mode" : "Preview Mode"}</p>
-          </TooltipContent>
-        </Tooltip>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onTogglePreview}
+          className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
+        >
+          {isPreviewMode ? (
+            <PencilIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+          ) : (
+            <EyeIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+          )}
+        </Button>
 
         <div className="w-px h-5 sm:h-5 bg-border/50 mx-0.5 flex-shrink-0" />
 
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
-                >
-                  <Cog6ToothIcon className="h-4 w-4 sm:h-4 sm:w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Settings</p>
-            </TooltipContent>
-          </Tooltip>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 sm:h-8 sm:w-8 rounded-full hover:bg-accent transition-all duration-200 flex-shrink-0 touch-manipulation"
+            >
+              <Cog6ToothIcon className="h-4 w-4 sm:h-4 sm:w-4" />
+            </Button>
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem
               onClick={() => setPosition("bottom-center")}
